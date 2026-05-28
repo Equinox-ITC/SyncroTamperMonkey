@@ -11,6 +11,8 @@
 // @grant        GM_setClipboard
 // @grant        GM_xmlhttpRequest
 // @connect      api.anthropic.com
+// @downloadURL  https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/Syncro-ChatHelper.User.js
+// @updateURL    https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/Syncro-ChatHelper.User.js
 // ==/UserScript==
 
 (function () {

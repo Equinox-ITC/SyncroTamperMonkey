@@ -6,53 +6,56 @@
   Faster Syncro ticket workflows. Less clicking. Better structure.
 </p>
 
-# Syncro Tickets Tampermonkey Helper
+# Syncro Tampermonkey Helper Scripts
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Status: Active](https://img.shields.io/badge/Status-Active-blue)
 ![Platform: Syncro](https://img.shields.io/badge/Platform-Syncro-orange)
 ![Maintained](https://img.shields.io/badge/Maintained-Yes-brightgreen)
-![Release](https://img.shields.io/github/v/release/gherbstman/SyncroTamperMonkey)
+![Release](https://img.shields.io/github/v/release/Equinox-ITC/SyncroTamperMonkey)
 
-Tampermonkey userscripts that improve day-to-day ticket handling in Syncro by adding faster time entry tools, copy helpers, sticky header behavior, comment workflow enhancements, and Copilot-ready ticket assist prompts.
+A collection of Tampermonkey userscripts that improve day-to-day working in Syncro — faster time entry, copy helpers, sticky headers, AI-assisted ticket and chat summaries, and asset management tools.
 
-## What This Script Does
+## Scripts in This Collection
 
-These scripts enhance Syncro ticket pages for the Syncro tenant domains:
-
-- `https://*.syncromsp.com/tickets/*`
-- `https://*.shield.syncromsp.com/tickets/*`
-
-This is intended for MSP technicians working Syncro tickets daily who want faster, keyboard-driven workflows and reduced repetitive actions.
+| Script | Page | Purpose |
+|---|---|---|
+| `SyncroTickets.user.js` | `/tickets/*` | Time entry, copy buttons, sticky header, canned responses, WoC |
+| `SyncroCopilotAssist.user.js` | `/tickets/*` | Build a structured Copilot prompt from ticket context |
+| `Syncro-ClaudeAssist.js` | `/tickets/*` | Send ticket context to Claude AI and display the response inline |
+| `Syncro-ChatHelper.User.js` | `/chat/*` | Extract and summarise chat conversations for copying into tickets |
+| `SyncroAssetFilter.user.js` | `/customer_assets*` | Filter assets by online status and bulk-select online devices |
 
 ## Quick Start (2 minutes)
 
 1. Install Tampermonkey
-2. Install scripts:
-   - SyncroTickets.user.js
-   - SyncroCopilotAssist.user.js
-3. Open any Syncro ticket
+2. Install the scripts you need (direct install links in the Installation section below)
+3. Open the relevant Syncro page
 
-Done. The helper loads automatically.
+Done. Each script loads automatically on its matched pages.
 
 ## How It Works
 
-- The userscripts only load on Syncro ticket pages that match the `@match` rules in the script header.
-- The main ticket helper watches the page and injects its buttons, menus, and keyboard/mouse shortcuts when the relevant Syncro UI is present.
-- Most features work entirely in the browser against the current ticket page; there is no backend service or Syncro API setup required.
-- Copilot Assist stores only your preferred Copilot chat URL in your browser/Tampermonkey profile so each technician can keep their own preference.
+- Each userscript loads only on the Syncro pages that match its `@match` rules.
+- Scripts that use the Claude API (`Syncro-ClaudeAssist.js`, `Syncro-ChatHelper.User.js`) require an Anthropic API key stored in Tampermonkey. Both scripts share the same stored key so it only needs to be entered once.
+- The main ticket helper and asset filter work entirely in the browser with no external services or API keys required.
+- Copilot Assist stores only your preferred Copilot chat URL in your browser/Tampermonkey profile.
 
 ## How To Use It
 
-- Install the userscripts in Tampermonkey and open any Syncro ticket.
+- Install the userscripts in Tampermonkey and open the relevant Syncro page.
 - Use the added buttons in the ticket header for quick copy actions, sticky navigation, and status/comment workflow shortcuts.
 - Use the time helper fields and keyboard shortcuts directly in the ticket labor log or comment forms.
 - Right-click inside the comment editor to open the custom menu with standard editing actions and canned responses.
-- Use **Copilot Assist** when you want a structured prompt built from the ticket context and opened in Copilot.
+- Use **Claude Assist** for an AI-generated response or diagnosis suggestion directly on the ticket page.
+- Use **Chat Helper** after a chat conversation to copy the transcript or generate a summary for the ticket.
+- Use **Asset Filter** on a customer assets page to show only online devices or select them all for bulk script runs.
 
 ## Features
 
-### Time and Duration Helpers
+### SyncroTickets.user.js — Ticket Helper (v2.8.12)
+
+#### Time and Duration Helpers
 
 - Smart duration parsing and normalization in helper bars:
   - `25m`, `2h`, `1.5`, `1:25`
@@ -80,13 +83,15 @@ Done. The helper loads automatically.
   - Mouse wheel adjusts date by +/- 1 day
   - Uses datepicker API when available, with native fallback
 
-### Ticket Copy Actions
+#### Ticket Copy Actions
 
-- Top-row quick copy buttons:
-  - Copy URL
-  - Copy TSU (ticket number + subject + URL)
-  - Copy Details (formatted summary)
-- Click ticket heading to copy ticket number
+Copy buttons appear in the ticket header bar. Button text is shown in blue.
+
+- **URL** — copies the ticket URL
+- **TSU** — copies ticket number + subject + URL (one-line format for pasting into chat or notes)
+- **Email Subject** — copies `Subject (message id: TicketNum)` formatted for use as an email reply subject line
+- **Details** — copies a formatted ticket summary block
+- Click the ticket heading to copy the ticket number
 - Customer info copy support from field icons:
   - Customer
   - Assigned contact
@@ -97,7 +102,7 @@ Done. The helper loads automatically.
   - Ticket address
 - Empty-copy guards to prevent copying blank values
 
-### Ticket UI Enhancements
+#### Ticket UI Enhancements
 
 - Sticky multi-row ticket header region for easier scrolling
 - WoC button to submit comment and set status to Waiting on Customer
@@ -105,14 +110,14 @@ Done. The helper loads automatically.
 - Ticket number copy from heading click
 - Native browser tooltips for script-added controls
 
-### Comment Editor Context Menu Enhancements
+#### Comment Editor Context Menu Enhancements
 
 - Custom right-click menu inside comment editor
 - Built-in Copy/Cut/Paste actions
 - Subject-aware canned response insertion
 - Uses full canned body from `data-body` attributes (HTML-decoded)
 
-### Canned Response Subject Matching (How It Works)
+#### Canned Response Subject Matching (How It Works)
 
 The right-click menu in the comment editor can show canned responses based on the currently selected comment subject.
 
@@ -138,7 +143,7 @@ Important behavior notes:
 - The menu always includes Copy/Cut/Paste; the Canned responses section appears only when matching entries are found.
 - The script inserts the full canned response body (decoded from HTML entities), so formatting/content is preserved better than truncated table text.
 
-### Reliability and Performance Improvements
+#### Reliability and Performance Improvements
 
 - Mutation filtering to reduce unnecessary reinjection cycles
 - Per-step injection isolation (one failing feature does not block others)
@@ -146,7 +151,9 @@ Important behavior notes:
 - Per-cycle widget lookup cache to reduce repeated DOM scans
 - Empty-copy guards to avoid copying blank values
 
-### Copilot Assist (Separate Script)
+---
+
+### SyncroCopilotAssist.user.js — Copilot Assist (v1.2.6)
 
 - Adds a **Copilot Assist** button to ticket pages
 - Collects key ticket context (ticket number, subject, status, priority, assignee, customer/contact info, latest comment snippet, link)
@@ -158,7 +165,7 @@ Important behavior notes:
   - Both
 - Supports a user-configurable Copilot URL (including custom agents)
 
-### Copilot Assist Usage and URL Configuration
+#### Copilot Assist Usage and URL Configuration
 
 How to use Copilot Assist on a ticket:
 
@@ -177,12 +184,6 @@ How to configure your Copilot URL:
 3. Save to store the URL for your user/browser profile.
 4. Leave it blank to clear your preference and return to standard Copilot chat.
 
-Recommended usage with custom agents:
-
-- If your team has a custom Copilot agent, paste that agent's chat URL so Copilot Assist opens directly into your agent experience.
-- This is useful for role-specific workflows (helpdesk triage, incident response, escalation assistant, compliance response templates, etc.).
-- Each technician can store their own preferred URL independently on their own browser profile.
-
 URL requirements and validation:
 
 - URL must be HTTPS.
@@ -190,13 +191,78 @@ URL requirements and validation:
 - Path must begin with `/chat`.
 - Invalid URLs are rejected so technicians do not accidentally store malformed/non-Copilot links.
 
-### Feature Configuration Summary
+---
 
-- No special setup is required for the main ticket helper beyond installing the userscript.
-- Sticky header, copy actions, duration helpers, and canned response tools are enabled automatically on supported ticket pages.
-- The only user-specific configuration in the current build is the Copilot Assist URL preference.
-- To change that preference, use **Shift+Click** on the **Copilot Assist** button and enter a new URL, or leave it blank to clear the saved value.
-- If your team uses a custom Copilot agent, save that agent's chat URL so the button opens directly into your preferred experience.
+### Syncro-ClaudeAssist.js — Claude Assist (v1.0.0)
+
+- Adds a **Claude Assist** panel directly on Syncro ticket pages
+- Sends ticket context (number, subject, status, priority, customer, latest comment) to the Claude API
+- Displays Claude's response in an inline panel without leaving the ticket
+- Uses `claude-haiku-4-5` by default (cost-efficient); model can be changed in the script header
+- Requires an Anthropic API key — stored securely in Tampermonkey storage, shared with Chat Helper so it only needs to be entered once
+
+#### Claude Assist Setup
+
+1. Open any Syncro ticket page.
+2. Click the **Claude Assist** button that appears in the ticket header.
+3. Enter your Anthropic API key when prompted (starts with `sk-ant-`).
+4. The key is saved in Tampermonkey storage and reused for all future requests.
+
+To update the key: click the **API Key** button in the Claude Assist panel.
+
+---
+
+### Syncro-ChatHelper.User.js — Chat Helper (v1.2.0)
+
+- Adds a floating **Chat Helper** button on Syncro chat pages (`/chat/*`)
+- Extracts the chat transcript from the active conversation in the middle pane
+- Identifies the customer organisation, contact name, asset, and technician from the chat sidebar
+- Provides three actions via a dropdown menu:
+  - **Copy Transcript** — formats the full conversation as plain text ready to paste into a ticket comment
+  - **Summarise with Claude** — sends the transcript to Claude and returns a concise structured note (Issue / Details / Actions / Status)
+  - **Debug: Dump Structure** — exports the live React DOM structure for diagnosing selector issues
+- Requires an Anthropic API key — shared with Claude Assist (same stored key)
+- Uses `claude-haiku-4-5` for cost-efficient summarisation
+
+#### Chat Helper Usage
+
+1. Open a chat conversation in Syncro (`/chat/all/{id}`).
+2. Click **Chat Helper ▾** (floating button, bottom-right of page).
+3. Choose **Copy Transcript** or **Summarise with Claude**.
+4. Copy the result from the panel and paste into the ticket.
+
+---
+
+### SyncroAssetFilter.user.js — Asset Filter (v1.3.0)
+
+- Adds a toolbar above the asset table on customer asset pages
+- **Show Online Only / Show All Devices** toggle — hides offline assets to make bulk targeting easier
+- **Select All Online** — checks the checkbox for every online device in the current page view, ready for a bulk script run
+- Live count badge showing online devices vs total (e.g. `12 online / 47 devices`)
+- Works with Syncro's React-rendered status icons using the `span.tooltipper` tooltip pattern
+- MutationObserver-driven so it responds as React renders status dots asynchronously
+
+#### Asset Filter Usage
+
+1. Open a customer's Assets page in Syncro.
+2. The toolbar appears automatically above the asset table.
+3. Click **Show Online Only** to hide offline devices.
+4. Click **Select All Online** to tick all visible online devices.
+5. Use Syncro's **Bulk Actions** menu to run a script against the selected devices.
+
+---
+
+## Feature Configuration Summary
+
+| Script | Requires API key | User config |
+|---|---|---|
+| `SyncroTickets.user.js` | No | None required |
+| `SyncroCopilotAssist.user.js` | No | Copilot URL (Shift+Click the button) |
+| `Syncro-ClaudeAssist.js` | Yes — Anthropic | API key (prompted on first use) |
+| `Syncro-ChatHelper.User.js` | Yes — Anthropic (shared) | API key (prompted on first use) |
+| `SyncroAssetFilter.user.js` | No | None required |
+
+Claude Assist and Chat Helper share the same Tampermonkey storage key for the Anthropic API key — entering it once covers both scripts.
 
 ## Requirements
 
@@ -204,6 +270,7 @@ URL requirements and validation:
 - Tampermonkey browser extension
 - Access to the target Syncro tenant URLs
 - Permission to run userscripts in the browser
+- Anthropic API key (required for Claude Assist and Chat Helper only)
 
 ## Installation
 
@@ -215,120 +282,97 @@ Install Tampermonkey from the browser extension store:
 - Microsoft Edge Add-ons
 - Firefox Add-ons
 
-### 2. Install a Userscript
-
-This repository contains two userscripts:
-
-- `SyncroTickets.user.js` (main workflow helper)
-- `SyncroCopilotAssist.user.js` (Copilot context/prompt helper)
+### 2. Install Userscripts
 
 Option A: Install from GitHub raw URL
 
-1. Open a raw script URL in your browser.
-2. Tampermonkey will detect and prompt to install.
-3. Approve installation.
+Open a raw script URL in your browser. Tampermonkey will detect it and prompt to install.
 
-Direct install URLs for this repository:
+Direct install URLs:
 
-`https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroTickets.user.js`
-
-`https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js`
-
-Generic raw URL format:
-
-`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/SyncroTickets.user.js`
-
-`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/SyncroCopilotAssist.user.js`
+```
+https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroTickets.user.js
+https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
+https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/Syncro-ClaudeAssist.js
+https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/Syncro-ChatHelper.User.js
+https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroAssetFilter.user.js
+```
 
 Option B: Manual install
 
 1. Open Tampermonkey dashboard.
 2. Create a new script.
-3. Paste contents of `SyncroTickets.user.js` or `SyncroCopilotAssist.user.js`.
+3. Paste the contents of the script file.
 4. Save.
 
-## Auto Updates via GitHub HTTP Reference
+## Auto Updates via GitHub
 
-Tampermonkey can auto-update userscripts when metadata includes `@updateURL` and `@downloadURL` pointing to GitHub raw HTTP endpoints.
+Tampermonkey can auto-update userscripts when the metadata includes `@updateURL` and `@downloadURL` pointing to GitHub raw URLs. All scripts in this repository already include these lines pointing to the `Equinox-ITC/SyncroTamperMonkey` repository.
 
-Add these lines to each userscript metadata header:
-
-```javascript
-// @downloadURL  https://raw.githubusercontent.com/<owner>/<repo>/<branch>/SyncroTickets.user.js
-// @updateURL    https://raw.githubusercontent.com/<owner>/<repo>/<branch>/SyncroTickets.user.js
-```
+Generic format:
 
 ```javascript
-// @downloadURL  https://raw.githubusercontent.com/<owner>/<repo>/<branch>/SyncroCopilotAssist.user.js
-// @updateURL    https://raw.githubusercontent.com/<owner>/<repo>/<branch>/SyncroCopilotAssist.user.js
+// @downloadURL  https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/<filename>
+// @updateURL    https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/<filename>
 ```
 
-Recommended for this repository:
-
-```javascript
-// @downloadURL  https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroTickets.user.js
-// @updateURL    https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroTickets.user.js
-```
-
-```javascript
-// @downloadURL  https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
-// @updateURL    https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
-```
-
-If the repository uses `master` instead of `main`, replace `main` with `master`.
-
-After this is set, Tampermonkey will check for updates according to its configured update interval.
+After installation, Tampermonkey will check for updates according to its configured update interval.
 
 ## Access and Scope Control
 
-The userscript is intentionally scoped with `@match` entries to Syncro ticket pages only.
-
-Current scope:
+Each script is scoped to the specific Syncro pages it needs:
 
 ```javascript
+// SyncroTickets.user.js + SyncroCopilotAssist.user.js + Syncro-ClaudeAssist.js
 // @match        https://*.syncromsp.com/tickets/*
 // @match        https://*.shield.syncromsp.com/tickets/*
+
+// Syncro-ChatHelper.User.js
+// @match        https://*.syncromsp.com/chat/*
+// @match        https://*.shield.syncromsp.com/chat/*
+
+// SyncroAssetFilter.user.js
+// @match        https://*.syncromsp.com/customer_assets*
 ```
 
-To enable additional Syncro tenant domains, add additional `@match` lines.
+To enable additional Syncro tenant domains, add matching `@match` lines to the relevant script.
 
 ## Credits
 
-- **Nick Fratangelo**: Original concept and initial build of this script. Original project: https://github.com/esperto/Syncro-TamperMonkey
-- **Gary Herbstman**: Expanded and optimized the script for internal staff workflows, while keeping features broadly useful for others.
-
-### Credit Details
-
-- Added reliability and performance optimizations for real-world ticket handling.
-- Implemented GitHub-based auto-update support via `@downloadURL` and `@updateURL` metadata.
-- Wrote and maintained full project documentation for installation, features, and update behavior.
-- Continued feature development to improve day-to-day technician efficiency.
+- **Nick Fratangelo**: Original concept and initial build of the ticket helper script. Original project: https://github.com/esperto/Syncro-TamperMonkey
+- **Gary Herbstman**: Expanded and optimised the ticket helper; implemented GitHub-based auto-update support; wrote the original Copilot Assist script.
+- **Des Quinn, Equinox ITC**: Ongoing development — v2.8.12 ticket helper additions (Email Subject button, blue copy button styling, theme refresh bug fixes); Claude Assist script; Chat Helper script; Asset Filter script; repository migration to Equinox-ITC.
 
 ## Development
 
 Repository files:
 
-- `SyncroTickets.user.js`: main userscript
-- `SyncroCopilotAssist.user.js`: Copilot prompt builder and launcher helper
-- `view-source_https___bytesolutions.shield.syncromsp.com_tickets_110818582.html`: page source reference snapshot for selector debugging
+- `SyncroTickets.user.js` — main ticket workflow helper (v2.8.12)
+- `SyncroCopilotAssist.user.js` — Copilot prompt builder and launcher (v1.2.6)
+- `Syncro-ClaudeAssist.js` — Claude AI inline ticket assist (v1.0.0)
+- `Syncro-ChatHelper.User.js` — chat transcript extractor and Claude summariser (v1.2.0)
+- `SyncroAssetFilter.user.js` — customer asset page online filter and bulk selector (v1.3.0)
 
 ## Troubleshooting
 
-- If changes do not appear, do a hard refresh.
-- If updates are not detected, verify `@updateURL` and `@downloadURL` values.
+- If changes do not appear, do a hard refresh (Ctrl+Shift+R).
+- If updates are not detected, verify `@updateURL` and `@downloadURL` values in the script header.
 - Confirm Tampermonkey script is enabled.
-- Check that URL matches one of the `@match` patterns.
-- For Copilot Assist, if Copilot does not open automatically, allow popups/new tabs for the site and try again.
-- For Copilot Assist URL issues, use **Shift+Click** on the Copilot Assist button to reconfigure the saved URL.
+- Check that the URL matches one of the script's `@match` patterns.
+- For Copilot Assist, if Copilot does not open automatically, allow popups/new tabs for the site.
+- For Copilot Assist URL issues, use **Shift+Click** on the button to reconfigure the saved URL.
 - Ensure configured Copilot URLs follow `https://m365.cloud.microsoft/chat...`.
 - For canned responses, ensure the ticket comment subject value exactly matches the canned response matching subject.
+- For Claude Assist / Chat Helper, if the API key prompt does not appear, check that Tampermonkey has `GM_setValue` / `GM_getValue` grants enabled for the script.
+- For Chat Helper, if the transcript shows 0 messages, use **Debug: Dump Structure** from the menu and share the output to help diagnose selector changes in the Syncro UI.
+- For Asset Filter, if the online count shows 0, ensure the status tooltips have finished rendering (wait a moment after page load).
 
 ## Important Scope Notes
 
-- This script runs locally in your browser only.
-- It does not interact with Syncro APIs or backend systems.
-- It does not transmit ticket data externally.
-- Behavior depends on Syncro’s frontend and may require updates if Syncro changes UI components.
+- Scripts run locally in your browser only.
+- `SyncroTickets.user.js`, `SyncroCopilotAssist.user.js`, and `SyncroAssetFilter.user.js` do not transmit any data externally.
+- `Syncro-ClaudeAssist.js` and `Syncro-ChatHelper.User.js` send ticket and chat content to the Anthropic API (`api.anthropic.com`) using your stored API key. No data is sent to any other service. Review Anthropic's privacy policy before use if your tickets contain sensitive customer data.
+- Behavior depends on Syncro's frontend and may require selector updates if Syncro changes its UI.
 
 ## License and Disclaimer
 
@@ -342,17 +386,11 @@ This software is provided "as is", without warranty of any kind. The authors mak
 
 By using this code, you assume all risk. The authors are not liable for any damages, data loss, service disruption, or other issues that may arise from its use.
 
-This project may require updates if Syncro changes its interface or behavior.
-
-Reuse of this code in other projects, scripts, or commercial tools is explicitly permitted and encouraged.
-
 The MIT License (MIT)
-Copyright © 2026 <copyright Byte Solutions, Inc.>
+Copyright © 2026 Equinox IT Consultancy
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

@@ -2,9 +2,9 @@
 // @name         Syncro – Ticket Helper
 // @homepageURL  https://github.com/Equinox-ITC/SyncroTamperMonkey
 // @namespace    http://tampermonkey.net/
-// @version      2.8.12
+// @version      2.8.11
 // @description  Add smart duration presets + ticket page efficiency tools (copy buttons, sticky header, priority/SLA hotkeys, WoC submit, canned response context menu)
-// @author       Des Quinn (Original work by Nick F + Gary Herbstman)
+// @author       Nick F + Gary Herbstman
 // @match        https://*.syncromsp.com/tickets/*
 // @match        https://*.shield.syncromsp.com/tickets/*
 // @grant        none
@@ -18,10 +18,10 @@
   var nativeSetter =
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
   var widgetCacheByHeader = null;
-  var stickyRowsCache = null;
-  var _stickyNavEls = null;
+  var stickyRowsCache = null;  // cached parts from getStickyHeaderRows
+  var _stickyNavEls = null;    // cached navbar elements for calcTopOffset
   var lastThemeSignature = "";
-  var _themeVarWriting = false; // guard to prevent applyStickyThemeVars triggering themeObserver loop
+  var _themeVarWriting = false;
 
   /* ═══════════════════ SHARED UTILITIES ═══════════════════ */
   function parse12h(str) {
@@ -154,6 +154,7 @@
     setTimeout(function () { btn.style.backgroundColor = old; }, 350);
   }
 
+  // CSS injector — each styleId maps to exactly one <style> block, injected once.
   function injectStyle(css, styleId) {
     styleId = styleId || "tm-extra-style";
     if (document.getElementById(styleId)) return;
@@ -232,16 +233,17 @@
 
   function applyStickyThemeVars(palette) {
     if (!palette) return;
-    // Set guard so the themeObserver ignores style attribute changes we make ourselves
-    _themeVarWriting = true;
     var root = document.documentElement;
-    root.style.setProperty("--tm-surface-bg", palette.bg);
-    root.style.setProperty("--tm-surface-fg", palette.fg);
-    root.style.setProperty("--tm-surface-border", palette.border);
-    root.style.setProperty("--tm-button-bg", palette.buttonBg);
-    root.style.setProperty("--tm-button-hover", palette.buttonHover);
-    // Use setTimeout so the MutationObserver callback fires and sees the flag before we clear it
-    setTimeout(function () { _themeVarWriting = false; }, 0);
+    _themeVarWriting = true;
+    try {
+      root.style.setProperty("--tm-surface-bg", palette.bg);
+      root.style.setProperty("--tm-surface-fg", palette.fg);
+      root.style.setProperty("--tm-surface-border", palette.border);
+      root.style.setProperty("--tm-button-bg", palette.buttonBg);
+      root.style.setProperty("--tm-button-hover", palette.buttonHover);
+    } finally {
+      _themeVarWriting = false;
+    }
   }
 
   function getThemeSignature() {
@@ -254,10 +256,11 @@
     if (!force && nextSig === lastThemeSignature) return;
     lastThemeSignature = nextSig;
 
+    // Sticky rows use CSS variables, so repaint by updating vars only.
     applyStickyThemeVars(getThemePalette(document.querySelector("#main") || document.body));
 
-    // Only tear down duration bars — they use inline palette styles and need rebuilding.
-    // Copy buttons are NOT torn down here; they keep their listeners via __tmCopyBound flags.
+    // Duration bars have inline styles and hover handlers derived at creation time.
+    // Recreate them on theme change so they pick up the new palette.
     var labor = document.getElementById("tm-laborlog-helper");
     if (labor) labor.remove();
 
@@ -1060,6 +1063,8 @@
     if (!element) return;
 
     var nativeTitle = element.getAttribute("title") || element.getAttribute("data-original-title") || "";
+
+    // Force native browser tooltip behavior for consistency.
     if (nativeTitle) element.setAttribute("title", nativeTitle);
 
     if (!hideOnClick || element.__tmTooltipClickBlurBound) return;
@@ -1096,6 +1101,8 @@
     };
   }
 
+  // Returns the bottom edge (px) of the lowest fixed navbar so sticky rows start beneath it.
+  // Nav element references are cached — they never change during a page session.
   function calcTopOffset() {
     if (!_stickyNavEls) {
       var found = ["nav.main-navbar", "nav.sub-navbar", "#section_header", "nav.navbar"]
@@ -1122,6 +1129,7 @@
   }
 
   function ensureStickyTicketHeaderRows() {
+    // Fast path: rows are still mounted — skip all setup and just refresh positions
     if (stickyRowsCache && document.contains(stickyRowsCache.backRow)) {
       applyStickyThemeVars(getThemePalette(document.querySelector("#main") || document.body));
       if (typeof window.__tmStickyApplyLayout === "function") window.__tmStickyApplyLayout();
@@ -1237,11 +1245,6 @@
   }
 
   function ensureTicketCopyButtons() {
-    injectStyle(`
-      .tm-mini-btn { color: #1976d2 !important; }
-      .tm-sticky-row .btn.btn-default.tm-mini-btn { color: #1976d2 !important; }
-    `, "tm-copy-btn-style");
-
     var ticketTitleHeading = document.querySelector(".row h1") || document.querySelector("h1");
     if (!ticketTitleHeading) return;
 
@@ -1253,7 +1256,10 @@
       ticketTitleHeading.__tmTicketCopyBound = true;
       ticketTitleHeading.addEventListener("click", async function () {
         var ticketNumber = (getTicketNumber() || "").trim();
-        if (!ticketNumber) { flashButton(ticketTitleHeading, false); return; }
+        if (!ticketNumber) {
+          flashButton(ticketTitleHeading, false);
+          return;
+        }
         var ok = await copyToClipboard(ticketNumber);
         flashButton(ticketTitleHeading, ok);
       });
@@ -1275,6 +1281,7 @@
       ticketTitleHeading.insertAdjacentElement("afterend", topCopyGroup);
     }
 
+    // Keep copy controls in a consistent place: left of + New in the top action button row.
     var topActionButtonBar = document.querySelector(".title-btns") || document.querySelector(".btn-bar");
     if (topActionButtonBar) {
       topCopyGroup.style.marginLeft = "0";
@@ -1282,86 +1289,70 @@
       topCopyGroup.style.flexWrap = "nowrap";
       if (topActionButtonBar.firstElementChild && topActionButtonBar.firstElementChild !== topCopyGroup) {
         topActionButtonBar.insertBefore(topCopyGroup, topActionButtonBar.firstElementChild);
-      } else if (!topActionButtonBar.contains(topCopyGroup)) {
+      } else if (topCopyGroup.parentElement !== topActionButtonBar) {
         topActionButtonBar.appendChild(topCopyGroup);
       }
     }
 
-    // Each button uses a __tmCopyBound flag so listeners survive theme refresh cycles
-    // without being duplicated. The element ID check still prevents creating new elements,
-    // but the flag ensures we only bind the click handler once per element lifetime.
-
     var btnUrl = document.getElementById("tm-copy-url-top");
     if (!btnUrl) {
-      btnUrl = createMiniButton("URL", "Copy Ticket URL");
+      btnUrl = createMiniButton("Copy URL", "Copy Ticket URL");
       btnUrl.id = "tm-copy-url-top";
       btnUrl.classList.add("tm-inline-mini");
       topCopyGroup.appendChild(btnUrl);
-      applyNativeTooltipBehavior(btnUrl, true);
     }
     if (!btnUrl.__tmCopyBound) {
       btnUrl.__tmCopyBound = true;
       btnUrl.addEventListener("click", async function () {
         var ticketUrl = (window.location.href || "").trim();
-        if (!ticketUrl) { flashButton(btnUrl, false); return; }
+        if (!ticketUrl) {
+          flashButton(btnUrl, false);
+          return;
+        }
         flashButton(btnUrl, await copyToClipboard(ticketUrl));
       });
     }
+    applyNativeTooltipBehavior(btnUrl, true);
 
     var btnTSU = document.getElementById("tm-copy-tsu");
     if (!btnTSU) {
-      btnTSU = createMiniButton("TSU", "Copy Ticket # + Subject + URL");
+      btnTSU = createMiniButton("Copy TSU", "Copy Ticket # + Subject + URL");
       btnTSU.id = "tm-copy-tsu";
       btnTSU.classList.add("tm-inline-mini");
       topCopyGroup.appendChild(btnTSU);
-      applyNativeTooltipBehavior(btnTSU, true);
     }
     if (!btnTSU.__tmCopyBound) {
       btnTSU.__tmCopyBound = true;
       btnTSU.addEventListener("click", async function () {
         var txt = ("TN: " + getTicketNumber() + " " + getTicketSubject() + " " + window.location.href).trim();
-        if (!txt || txt === "TN:") { flashButton(btnTSU, false); return; }
+        if (!txt || txt === "TN:") {
+          flashButton(btnTSU, false);
+          return;
+        }
         flashButton(btnTSU, await copyToClipboard(txt));
       });
     }
-
-    // ── Copy Email Subject ──────────────────────────────────────────────────
-    var btnEmailSubject = document.getElementById("tm-copy-emailsubject");
-    if (!btnEmailSubject) {
-      btnEmailSubject = createMiniButton("Email Subject", "Copy Subject + Message ID formatted for email subject line");
-      btnEmailSubject.id = "tm-copy-emailsubject";
-      btnEmailSubject.classList.add("tm-inline-mini");
-      topCopyGroup.appendChild(btnEmailSubject);
-      applyNativeTooltipBehavior(btnEmailSubject, true);
-    }
-    if (!btnEmailSubject.__tmCopyBound) {
-      btnEmailSubject.__tmCopyBound = true;
-      btnEmailSubject.addEventListener("click", async function () {
-        var subject = getTicketSubject();
-        var ticketNum = getTicketIdFromPath();
-        if (!subject || !ticketNum) { flashButton(btnEmailSubject, false); return; }
-        var txt = subject + " (message id: " + ticketNum + ")";
-        flashButton(btnEmailSubject, await copyToClipboard(txt));
-      });
-    }
-    // ───────────────────────────────────────────────────────────────────────
+    applyNativeTooltipBehavior(btnTSU, true);
 
     var btnDetails = document.getElementById("tm-copy-details");
     if (!btnDetails) {
-      btnDetails = createMiniButton("Details", "Copy formatted ticket details");
+      btnDetails = createMiniButton("Copy Details", "Copy formatted ticket details");
       btnDetails.id = "tm-copy-details";
       btnDetails.classList.add("tm-inline-mini");
       topCopyGroup.appendChild(btnDetails);
-      applyNativeTooltipBehavior(btnDetails, true);
     }
     if (!btnDetails.__tmCopyBound) {
       btnDetails.__tmCopyBound = true;
       btnDetails.addEventListener("click", async function () {
         var detailsText = (buildTicketSummaryText() || "").trim();
-        if (!detailsText) { flashButton(btnDetails, false); return; }
+        if (!detailsText) {
+          flashButton(btnDetails, false);
+          return;
+        }
         flashButton(btnDetails, await copyToClipboard(detailsText));
       });
     }
+    applyNativeTooltipBehavior(btnDetails, true);
 
     var actionButtonBar = topActionButtonBar;
     if (!actionButtonBar) return;
@@ -1370,7 +1361,13 @@
       var microCopyGroup = document.createElement("span");
       microCopyGroup.id = "tm-copy-micro-group";
       microCopyGroup.className = "tm-copy-strip";
+
       actionButtonBar.appendChild(microCopyGroup);
+
+      applyNativeTooltipBehavior(document.getElementById("tm-copy-url-top"), true);
+      applyNativeTooltipBehavior(document.getElementById("tm-copy-tsu"), true);
+      applyNativeTooltipBehavior(document.getElementById("tm-copy-details"), true);
+      applyNativeTooltipBehavior(ticketTitleHeading, true);
     }
 
     var customerWidget = getWidgetByHeaderText("Customer Info");
@@ -1395,7 +1392,10 @@
 
       for (var i = 0; i < headerCells.length; i++) {
         var txt = safeText(headerCells[i]).toLowerCase();
-        if (isMatchingLabel(txt)) { matchingHeaderCell = headerCells[i]; break; }
+        if (isMatchingLabel(txt)) {
+          matchingHeaderCell = headerCells[i];
+          break;
+        }
       }
       if (!matchingHeaderCell) return;
 
@@ -1412,25 +1412,71 @@
       icon.style.cursor = "copy";
       icon.setAttribute("title", title);
 
-      icon.addEventListener("click", async function () {
+      var copyFieldValue = async function () {
         var textToCopy = (getCopyValue() || "").trim();
-        if (!textToCopy) { flashButton(icon, false); return; }
+        if (!textToCopy) {
+          flashButton(icon, false);
+          return;
+        }
         var ok = await copyToClipboard(textToCopy);
         flashButton(icon, ok);
-      });
+      };
+
+      icon.addEventListener("click", copyFieldValue);
 
       applyNativeTooltipBehavior(icon, false);
     }
 
     removeOldFieldCopyButtons();
 
-    bindFieldIconCopy("customer", function (t) { return t === "customer"; }, "Copy Customer Name", getCustomerName);
-    bindFieldIconCopy("primaryContact", function (t) { return t.indexOf("assigned contact") !== -1 || t.indexOf("primary contact") !== -1; }, "Copy Primary Contact Name", getPrimaryContactName);
-    bindFieldIconCopy("email", function (t) { return t === "email" || t.indexOf("email") !== -1; }, "Copy Primary Contact Email", getPrimaryContactEmail);
-    bindFieldIconCopy("phone", function (t) { return t === "phone" || t.indexOf("phone") !== -1; }, "Copy Phone", getPhone);
-    bindFieldIconCopy("mobile", function (t) { return t.indexOf("contact mobile") !== -1 || t === "mobile"; }, "Copy Contact Mobile", getContactMobile);
-    bindFieldIconCopy("primaryAddress", function (t) { return t.indexOf("primary address") !== -1; }, "Copy Primary Address", getPrimaryAddress);
-    bindFieldIconCopy("ticketAddress", function (t) { return t.indexOf("ticket address") !== -1; }, "Copy Ticket Address", getTicketAddress);
+    bindFieldIconCopy(
+      "customer",
+      function (t) { return t === "customer"; },
+      "Copy Customer Name",
+      getCustomerName
+    );
+
+    bindFieldIconCopy(
+      "primaryContact",
+      function (t) { return t.indexOf("assigned contact") !== -1 || t.indexOf("primary contact") !== -1; },
+      "Copy Primary Contact Name",
+      getPrimaryContactName
+    );
+
+    bindFieldIconCopy(
+      "email",
+      function (t) { return t === "email" || t.indexOf("email") !== -1; },
+      "Copy Primary Contact Email",
+      getPrimaryContactEmail
+    );
+
+    bindFieldIconCopy(
+      "phone",
+      function (t) { return t === "phone" || t.indexOf("phone") !== -1; },
+      "Copy Phone",
+      getPhone
+    );
+
+    bindFieldIconCopy(
+      "mobile",
+      function (t) { return t.indexOf("contact mobile") !== -1 || t === "mobile"; },
+      "Copy Contact Mobile",
+      getContactMobile
+    );
+
+    bindFieldIconCopy(
+      "primaryAddress",
+      function (t) { return t.indexOf("primary address") !== -1; },
+      "Copy Primary Address",
+      getPrimaryAddress
+    );
+
+    bindFieldIconCopy(
+      "ticketAddress",
+      function (t) { return t.indexOf("ticket address") !== -1; },
+      "Copy Ticket Address",
+      getTicketAddress
+    );
   }
 
   function addWoCSubmitButton() {
@@ -1457,6 +1503,7 @@
           }
         }
       }
+
       var submit = document.querySelector(".bhv-submitComment") || document.querySelector("#new_comment input[type='submit']");
       if (submit) submit.click();
     });
@@ -1531,13 +1578,17 @@
     async function pasteIntoEditor(text) {
       var ed = getEditorEl();
       if (!ed) return;
+
+      // OPTIONAL (included): if it looks like HTML, always insert as HTML (prevents truncation/format-loss)
       var looksHtml = /<\/?[a-z][\s\S]*>/i.test(text);
+
       if (ed.isContentEditable) {
         ed.focus();
         if (looksHtml) document.execCommand("insertHTML", false, text);
         else document.execCommand("insertText", false, text);
         return;
       }
+
       ed.focus();
       var start = ed.selectionStart || 0;
       var end = ed.selectionEnd || 0;
@@ -1547,6 +1598,7 @@
       ed.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
+    // ✅ FIX: always use the real data-body attribute (not truncated cell text)
     function getCannedRows() {
       var wanted = ((document.getElementById("comment_subject") && document.getElementById("comment_subject").value) || "").trim().toLowerCase();
       var rows = document.querySelectorAll("#canny-datatable tbody tr");
@@ -1568,9 +1620,13 @@
           if (!subj || subj !== wanted) continue;
         }
 
+        // Find the element that actually holds data-body
         var bodyEl = tr.querySelector("[data-body]");
         var body = bodyEl ? (bodyEl.getAttribute("data-body") || (bodyEl.dataset && bodyEl.dataset.body) || "") : "";
+
+        // Fallback: sometimes it sits on the tr itself
         if (!body) body = tr.getAttribute("data-body") || (tr.dataset && tr.dataset.body) || "";
+
         if (!body) continue;
 
         body = decodeHtmlEntities(body);
@@ -1707,7 +1763,6 @@
   observer.observe(getObservationRoot(), { childList: true, subtree: true });
 
   var themeObserver = new MutationObserver(function () {
-    // Ignore attribute changes caused by our own applyStickyThemeVars calls
     if (_themeVarWriting) return;
     scheduleRunInjections();
   });

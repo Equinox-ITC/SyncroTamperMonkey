@@ -10,8 +10,8 @@
 // @grant        GM_openInTab
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @downloadURL  https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
-// @updateURL    https://raw.githubusercontent.com/gherbstman/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
+// @downloadURL  https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
+// @updateURL    https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroCopilotAssist.user.js
 // ==/UserScript==
 
 (function () {

@@ -6,6 +6,8 @@
 // @author       Equinox ITC
 // @match        https://*.syncromsp.com/customer_assets*
 // @grant        none
+// @downloadURL  https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroAssetFilter.user.js
+// @updateURL    https://raw.githubusercontent.com/Equinox-ITC/SyncroTamperMonkey/main/SyncroAssetFilter.user.js
 // ==/UserScript==
 
 (function () {
