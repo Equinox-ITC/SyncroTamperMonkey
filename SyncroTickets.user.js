@@ -2,8 +2,8 @@
 // @name         Syncro – Ticket Helper
 // @homepageURL  https://github.com/Equinox-ITC/SyncroTamperMonkey
 // @namespace    http://tampermonkey.net/
-// @version      2.8.12
-// @description  Add smart duration presets + ticket page efficiency tools (copy buttons, sticky header, priority/SLA hotkeys, WoC submit, canned response context menu)
+// @version      2.8.13
+// @description  Add smart duration presets + ticket page efficiency tools (copy buttons, sticky header, priority/SLA hotkeys, WoC/InP submit, canned response context menu)
 // @author       Des Quinn (Original work by Nick F + Gary Herbstman)
 // @match        https://*.syncromsp.com/tickets/*
 // @match        https://*.shield.syncromsp.com/tickets/*
@@ -1434,34 +1434,41 @@
   }
 
   function addWoCSubmitButton() {
-    if (document.getElementById("tm-woc-btn")) return;
+    if (document.getElementById("tm-woc-btn") && document.getElementById("tm-ip-btn")) return;
 
     var group = document.querySelector(".btn-group.btn-submitComment");
     if (!group) return;
 
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = "tm-woc-btn";
-    btn.className = "btn btn-default btn-sm";
-    btn.textContent = "WoC";
-    btn.setAttribute("title", "Submit and set Ticket Status to 'Waiting on Customer'");
-
-    btn.addEventListener("click", function () {
-      var sel = document.getElementById("ticket_status");
-      if (sel) {
-        for (var i = 0; i < sel.options.length; i++) {
-          if (String(sel.options[i].value || "") === "Waiting on Customer") {
-            sel.selectedIndex = i;
-            sel.dispatchEvent(new Event("change", { bubbles: true }));
-            break;
+    function makeStatusSubmitBtn(id, label, title, statusValue) {
+      if (document.getElementById(id)) return null;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = id;
+      btn.className = "btn btn-default btn-sm";
+      btn.textContent = label;
+      btn.setAttribute("title", title);
+      btn.addEventListener("click", function () {
+        var sel = document.getElementById("ticket_status");
+        if (sel) {
+          for (var i = 0; i < sel.options.length; i++) {
+            if (String(sel.options[i].value || "") === statusValue) {
+              sel.selectedIndex = i;
+              sel.dispatchEvent(new Event("change", { bubbles: true }));
+              break;
+            }
           }
         }
-      }
-      var submit = document.querySelector(".bhv-submitComment") || document.querySelector("#new_comment input[type='submit']");
-      if (submit) submit.click();
-    });
+        var submit = document.querySelector(".bhv-submitComment") || document.querySelector("#new_comment input[type='submit']");
+        if (submit) submit.click();
+      });
+      return btn;
+    }
 
-    group.parentNode.insertBefore(btn, group);
+    var wocBtn = makeStatusSubmitBtn("tm-woc-btn", "WoC", "Submit and set Ticket Status to 'Waiting on Customer'", "Waiting on Customer");
+    var ipBtn  = makeStatusSubmitBtn("tm-ip-btn",  "InP", "Submit and set Ticket Status to 'In Progress'",        "In Progress");
+
+    if (wocBtn) group.parentNode.insertBefore(wocBtn, group);
+    if (ipBtn)  group.parentNode.insertBefore(ipBtn,  group);
   }
 
   function buildContextMenu() {
